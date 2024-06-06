@@ -1,0 +1,11 @@
+Write a function that computes the first n Fibonacci numbers.
+
+Write a function to check if a given string is a palindrome.
+
+Implement the Bubble Sort algorithm.
+
+Write a function that checks if a given number is a prime number.
+
+Create a basic calculator that can perform addition, subtraction, multiplication, and division.
+
+Write a function that converts a list of dictionaries (JSON) to a CSV format.
