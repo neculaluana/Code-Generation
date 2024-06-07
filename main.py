@@ -72,13 +72,26 @@ def run_python_script(filename):
         result = subprocess.run(['python', filename], capture_output=True, text=True, check=True)
         if result.returncode == 0:
             print("All tests passed.")
+            return result.stdout, result.stderr, False, False
         else:
             print("There were some errors in the tests.")
+            return result.stdout, result.stderr, False, True
         print(result.stdout)
     except subprocess.CalledProcessError as e:
         print("Error running script:", e)
         print(e.stdout)
         print(e.stderr)
+        return e.stdout, e.stderr, True, False
+
+
+def fix_code(model_id, code, tests, errors):
+    """Use the model to fix the code based on the errors."""
+    fix_messages = [
+        {"role": "system", "content": "You are a senior python developer that receives error messages and the code, and you need to fix the errors in the code. Write only code with no explainations. You are only allowed to write code and nothing else."},
+        {"role": "user", "content": f"Here is the code:\n{code}\nHere are the tests:\n{tests}\nHere are the errors:\n{errors}"}
+    ]
+    fixed_code = execute_pipeline(model_id, fix_messages, "fix")
+    return fixed_code
 
 model_id = "../models/llama3_8b_instruct"
 prompt = "Write a function that computes the first n Fibonacci numbers."
@@ -102,4 +115,16 @@ test_messages = [
 test_output = execute_pipeline(model_id, test_messages, "test")
 save_to_file("testing.py", test_output)
 print(test_output)
-run_python_script("testing.py")
+
+stdout, stderr, script_failed, test_failed = run_python_script("testing.py")
+
+if script_failed or test_failed:
+    errors = f"{stdout}\n{stderr}"
+    with open("generated_code.py", "r") as file:
+        code_content = file.read()
+    with open("testing.py", "r") as file:
+        test_content = file.read()
+    fixed_code = fix_code(model_id, code_content, test_content, errors)
+    save_to_file("generated_code.py", fixed_code)
+    print(fixed_code)
+    stdout, stderr, script_failed, test_failed = run_python_script("testing.py")
