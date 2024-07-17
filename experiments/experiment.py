@@ -97,7 +97,7 @@ def fix_code(model_id, code, tests, errors):
 
 
 
-model_id = "../models/llama3_8b_instruct"
+model_id = "../../models/llama3_8b_instruct"
 prompt = "Write a function that checks if a given number is a prime number."
 
 code_messages = [
@@ -107,7 +107,7 @@ code_messages = [
 ]
 
 code_output = execute_pipeline(model_id, code_messages, "code")
-save_to_file("generated_code.py", code_output)
+save_to_file("../generated_code.py", code_output)
 print(code_output)
 
 test_messages = [
@@ -117,22 +117,23 @@ test_messages = [
 ]
 
 test_output = execute_pipeline(model_id, test_messages, "test")
-save_to_file("testing.py", test_output)
+save_to_file("../testing.py", test_output)
 print(test_output)
 
-stdout, stderr, test_failed = run_python_script("testing.py")
+stdout, stderr, test_failed = run_python_script("../testing.py")
 loop_index = 1
 
 
 while test_failed and loop_index <= 5:
-    errors = f"{stdout}\n{stderr}"
-    with open("generated_code.py", "r") as file:
+    errors = f"{stdout}\n ~~~~~~~~~~~~~~~~~~~~\n{stderr}"
+    save_to_file("errors.txt", errors)
+    with open("../generated_code.py", "r") as file:
         code_content = file.read()
-    with open("testing.py", "r") as file:
+    with open("../testing.py", "r") as file:
         test_content = file.read()
     if test_failed:
         fixed_code = fix_code(model_id, code_content, test_content, errors)
-        save_to_file("generated_code.py", fixed_code)
+        save_to_file("../generated_code.py", fixed_code)
     print(fixed_code)
-    stdout, stderr, test_failed = run_python_script("testing.py")
+    stdout, stderr, test_failed = run_python_script("../testing.py")
     loop_index = loop_index + 1
