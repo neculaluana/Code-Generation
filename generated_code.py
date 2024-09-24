@@ -1,13 +1,9 @@
 
-def fibonacci(n):
-    if n <= 0:
-        return []
-    elif n == 1:
-        return [0]
-    elif n == 2:
-        return [0, 1]
-    else:
-        fib_sequence = [0, 1]
-        while len(fib_sequence) < n:
-            fib_sequence.append(fib_sequence[-1] + fib_sequence[-2])
-        return fib_sequence
+def is_palindrome(s: str | int) -> bool:
+    if not isinstance(s, (str, int)):
+        raise TypeError("Input must be a string or an integer.")
+    if isinstance(s, int):
+        s = str(s)
+    s = s.replace(" ", "").lower()
+    s = ''.join(e for e in s if e.isalnum())
+    return s == s[::-1]
