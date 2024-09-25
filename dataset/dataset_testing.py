@@ -1,5 +1,4 @@
 import os
-import random
 import pandas as pd
 import transformers
 import torch
@@ -10,7 +9,6 @@ import execution
 
 def is_virtual_environment():
     return os.getenv('VIRTUAL_ENV') is not None
-
 
 def print_environment_info():
     print(f"Torch version: {torch.__version__}")
@@ -23,7 +21,6 @@ def print_environment_info():
     else:
         print("You are not inside a virtual environment.")
 
-
 def get_pipeline(model_id):
     if 'model_pipeline' not in globals():
         global model_pipeline
@@ -34,7 +31,6 @@ def get_pipeline(model_id):
             device_map="auto"
         )
     return model_pipeline
-
 
 def execute_pipeline(model_id, messages, mode):
     model_pipeline = get_pipeline(model_id)
@@ -59,7 +55,6 @@ def execute_pipeline(model_id, messages, mode):
     end_time = time.time()
     print(f"Time taken for {mode}: {end_time - start_time}")
     return outputs[0]["generated_text"][len(prompt):]
-
 
 def generate_code_from_prompt(model_id, prompt):
     messages = [
@@ -91,13 +86,11 @@ def generate_code_from_prompt(model_id, prompt):
     code_output = execute_pipeline(model_id, messages, "code")
     return code_output
 
-
 def save_to_file(filename, content):
     content = content.replace('`', '')
     with open(filename, 'w') as file:
         file.write(content)
     print(f"Saved {filename}")
-
 
 def postprocess(code: str):
     if "```python" in code:
@@ -111,37 +104,15 @@ def postprocess(code: str):
 
     return code
 
-
-def append_to_json(filename, data):
-    try:
-        if os.path.exists(filename) and os.path.getsize(filename) > 0:
-            with open(filename, 'r') as file:
-                try:
-                    json_data = json.load(file)
-                except json.JSONDecodeError:
-                    print(f"File {filename} is corrupted, initializing with an empty list.")
-                    json_data = []
-        else:
-            json_data = []
-
-        json_data.append(data)
-
-        with open(filename, 'w') as file:
-            json.dump(json_data, file, indent=4)
-    except Exception as e:
-        print(f"Error writing to {filename}: {e}")
-
-
 def eval_single_example(example: dict, generated_code: str):
-
     code_context = example['code_context']
     problem_id = example['metadata']['problem_id']
 
     test_program = (
-            code_context + '\n'
-            + f'code = {repr(generated_code)}\n'
-            + 'test_execution(code)\n'
-            + ('test_string(code)\n' if 'test_string(' in code_context else '\n')
+        code_context + '\n'
+        + f'code = {repr(generated_code)}\n'
+        + 'test_execution(code)\n'
+        + ('test_string(code)\n' if 'test_string(' in code_context else '\n')
     )
 
     result = execution.check_correctness(test_program, timeout=120, completion_id=problem_id)
@@ -154,43 +125,76 @@ def eval_single_example(example: dict, generated_code: str):
         'library': example['metadata']['library'],
         'perturbation_type': example['metadata']['perturbation_type'],
         'expected_output': example['reference_code'],
-        'reason':result['result']
+        'reason': result['result']
     }
 
     return result_summary
 
-
 def main():
     df = pd.read_json("test.jsonl", lines=True)
 
-    random_entry = df.sample(n=1).iloc[0]
-    prompt = random_entry['prompt']
+    # At the beginning, read existing results if any
+    output_filename = "dataset_results.jsonl"
+    processed_problem_ids = set()
+    total_passed = 0
+    total_failed = 0
+    results_list = []
+    if os.path.exists(output_filename):
+        with open(output_filename, 'r') as f:
+            for line in f:
+                result = json.loads(line)
+                processed_problem_ids.add(result['problem_id'])
+                results_list.append(result)
+                if result['score'] == 1:
+                    total_passed += 1
+                else:
+                    total_failed += 1
+
+    total_examples = len(df)
 
     print_environment_info()
 
     model_id = "../models/llama3_8b_instruct"
 
-    generated_code = generate_code_from_prompt(model_id, prompt)
+    for idx, random_entry in df.iterrows():
+        problem_id = random_entry['metadata']['problem_id']
+        if problem_id in processed_problem_ids:
+            print(f"Skipping already processed problem_id {problem_id}")
+            continue
+        prompt = random_entry['prompt']
 
-    save_to_file("dataset_generated_code.py", generated_code)
+        generated_code = generate_code_from_prompt(model_id, prompt)
 
-    processed_code = postprocess(generated_code)
-    result = eval_single_example(random_entry, processed_code)
+        # Save to the same file each time
+        save_to_file("dataset_generated_code.py", generated_code)
 
-    print("\nGenerated Code:")
-    print(processed_code)
-    print("\nEvaluation Result:")
-    print(f"Score: {result['score']}, because {result['reason']}")
-    print(f"Expected Output: {result['expected_output']}")
-    print(f"Library: {result['library']}")
-    print(f"Perturbation Type: {result['perturbation_type']}")
+        processed_code = postprocess(generated_code)
+        result = eval_single_example(random_entry, processed_code)
 
-    output_filename = "dataset_results.json"
-    append_to_json(output_filename, result)
-    print(f"Result appended to {output_filename}")
+        # Update counts
+        if result['score'] == 1:
+            total_passed += 1
+        else:
+            total_failed += 1
 
+        # Collect results
+        results_list.append(result)
+
+        # Append the result to the output file
+        with open(output_filename, 'a') as f:
+            f.write(json.dumps(result) + '\n')
+        print(f"Processed problem_id {problem_id}")
+
+    # Now calculate and print statistics
+    pass_percentage = (total_passed / total_examples) * 100
+    fail_percentage = (total_failed / total_examples) * 100
+
+    print("\nStatistics:")
+    print(f"Total examples: {total_examples}")
+    print(f"Passed: {total_passed}")
+    print(f"Failed: {total_failed}")
+    print(f"Pass percentage: {pass_percentage:.2f}%")
+    print(f"Fail percentage: {fail_percentage:.2f}%")
 
 if __name__ == "__main__":
     main()
-
-#chain of thought§

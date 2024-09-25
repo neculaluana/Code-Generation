@@ -200,7 +200,7 @@ def generate_new_tests(model_id, code, context, additional_instructions=""):
 
 
 model_id = "../models/llama3_8b_instruct"
-prompt = "Write a function to check if a given string is a palindrome."
+prompt = "Write a Python function that reverses a given string."
 
 code_messages = [
     {
@@ -285,7 +285,7 @@ while test_failed and loop_index <= 5:
 
 append_to_context(stdout + stderr, "Final Test Output")
 
-additional_instructions = "Modify the code so it also works for integers"
+additional_instructions = "make all lower-case letters upper-case"
 
 if additional_instructions.strip():
     with open("context.txt", "r") as file:

@@ -1,41 +1,28 @@
 
 import unittest
-from generated_code import is_palindrome
+from generated_code import reverse_string
 
-class TestIsPalindrome(unittest.TestCase):
+class TestReverseString(unittest.TestCase):
 
-    def test_palindrome_string(self):
-        self.assertTrue(is_palindrome("A man, a plan, a canal, Panama"))
-        self.assertTrue(is_palindrome("Was it a car or a cat I saw"))
-        self.assertTrue(is_palindrome("Able was I ere I saw Elba"))
-        self.assertTrue(is_palindrome("A Santa at NASA"))
+    def test_reverse_string(self):
+        self.assertEqual(reverse_string("hello"), "OLLEH")
+        self.assertEqual(reverse_string("world"), "DLROW")
+        self.assertEqual(reverse_string(""), "")
+        self.assertEqual(reverse_string("a"), "A")
+        self.assertEqual(reverse_string("abc"), "cba")
+        self.assertEqual(reverse_string("123"), "321")
+        self.assertEqual(reverse_string("123abc"), "cba321")
+        self.assertEqual(reverse_string("123abc456"), "654321cba")
+        self.assertEqual(reverse_string("123abc456def"), "fed654321cba")
+        self.assertEqual(reverse_string("123abc456defghi"), "ihged654321cba")
 
-    def test_palindrome_string_with_spaces(self):
-        self.assertFalse(is_palindrome("Hello World"))
-        self.assertFalse(is_palindrome("   Hello World   "))
-
-    def test_palindrome_string_with_punctuation(self):
-        self.assertFalse(is_palindrome("Hello, World!"))
-        self.assertFalse(is_palindrome("Hello World!"))
-
-    def test_palindrome_string_with_numbers(self):
-        self.assertFalse(is_palindrome("12321"))
-        self.assertFalse(is_palindrome("123456"))
-
-    def test_palindrome_string_with_empty_string(self):
-        self.assertTrue(is_palindrome(""))
-
-    def test_palindrome_string_with_non_string_input(self):
+    def test_non_string_input(self):
         with self.assertRaises(TypeError):
-            is_palindrome(123)
+            reverse_string(123)
         with self.assertRaises(TypeError):
-            is_palindrome([1, 2, 3])
+            reverse_string([1, 2, 3])
         with self.assertRaises(TypeError):
-            is_palindrome({"a": 1, "b": 2})
-
-    def test_palindrome_integer(self):
-        self.assertTrue(is_palindrome(121))
-        self.assertFalse(is_palindrome(123456))
+            reverse_string({"a": 1, "b": 2})
 
 if __name__ == '__main__':
     unittest.main()
